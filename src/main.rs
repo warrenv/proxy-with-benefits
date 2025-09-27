@@ -12,7 +12,8 @@ use load_balancer::{
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    tracing::info!("Starting app");
+
+    tracing::info!("Creating LoadBalancer");
 
     let worker_hosts = vec![
         "http://localhost:7701".to_string(),
@@ -25,6 +26,8 @@ async fn main() {
 
     let app_state = AppState::new();
 
+    tracing::info!("Creating Application");
+
     let app = Application::build(
         app_state,
         load_balancer,
@@ -32,6 +35,8 @@ async fn main() {
     )
     .await
     .expect("Failed to build app");
+
+    tracing::info!("Running load balancer");
 
     app.run().await.expect("Failed to run app");
 }
