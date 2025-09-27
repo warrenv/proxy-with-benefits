@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use wiremock::MockServer;
 
-use auth_service::{app_state::AppState, utils::constants::test, Application};
+use load_balancer::{app_state::AppState, utils::constants::test, Application};
 
 pub struct TestApp {
     pub address: String,
@@ -16,16 +16,18 @@ impl TestApp {
     pub async fn new() -> Self {
         let app_state = AppState {};
 
-        let app = Application::build(app_state, test::APP_ADDRESS)
+        let app = Application::build(app_state, test::LB_IP_ADDR, test::LB_PORT)
             .await
             .expect("Failed to build app");
 
         let address = format!("http://{}", app.address.clone());
 
-        // Run the auth service in a separate async task
+        // Run the service in a separate async task
         // to avoid blocking the main test thread.
         #[allow(clippy::let_underscore_future)]
         let _ = tokio::spawn(app.run());
+
+        let http_client = reqwest::Client::builder().build().unwrap();
 
         Self {
             address,

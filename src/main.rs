@@ -1,42 +1,45 @@
+use hyper::{service::service_fn, Request, Response};
 use std::{convert::Infallible, net::SocketAddr, str::FromStr, sync::Arc};
-
-use hyper::{
-    client::ResponseFuture,
-    service::{make_service_fn, service_fn},
-    Body, Client, Request, Response, Server, Uri,
-};
 use tokio::sync::RwLock;
 
-use proxy_with_benefits::{
-    app_state::Appstate, domain::LoadBalancer, utils::contants::prod, Application,
+use load_balancer::{
+    app_state::AppState,
+    domain::LoadBalancer,
+    utils::constants::{DEFAULT_LB_IP_ADDR, DEFAULT_LB_PORT},
+    Application,
 };
 
+//mod app_state;
+
 async fn handle(
-    req: Request<Body>,
+    req: Request<hyper::body::Incoming>,
     load_balancer: Arc<RwLock<LoadBalancer>>,
-) -> Result<Response<Body>, hyper::Error> {
-    load_balancer.write().await.forward_request(req).await
+    //) -> Result<Response<hyper::body::Incoming>, hyper::Error> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let _ = load_balancer.write().await;
+    LoadBalancer::forward_request(req).await
 }
 
 #[tokio::main]
 async fn main() {
     let worker_hosts = vec![
-        "http://localhost:3000".to_string(),
-        "http://localhost:3001".to_string(),
+        "http://localhost:7701".to_string(),
+        "http://localhost:7702".to_string(),
     ];
 
     let load_balancer = Arc::new(RwLock::new(
         LoadBalancer::new(worker_hosts).expect("failed to create load balancer"),
     ));
 
-    let addr: SocketAddr = SocketAddr::from(([127, 0, 0, 1], 1337));
+    let app_state = AppState::new();
 
-    let server = Server::bind(&addr).serve(make_service_fn(move |_conn| {
-        let load_balancer = load_balancer.clone();
-        async move { Ok::<_, Infallible>(service_fn(move |req| handle(req, load_balancer.clone()))) }
-    }));
+    let app = Application::build(
+        app_state,
+        load_balancer,
+        &format!("{}:{}", DEFAULT_LB_IP_ADDR, DEFAULT_LB_PORT),
+    )
+    .await
+    .expect("Failed to build app");
 
-    if let Err(e) = server.await {
-        println!("error: {}", e);
-    }
+    app.run().await.expect("Failed to run app");
 }

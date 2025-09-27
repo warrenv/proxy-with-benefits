@@ -9,6 +9,7 @@
   - [ ] add load_balancer.rs
 
 - [ ] create config.rs ??? use config loader crate? use constants.rs?
+- [ ] create app_state.rs
 
 - domain entities
   - error.rs
@@ -16,7 +17,8 @@
   - load_balancer.rs
     - [x] LoadBalancer struct.
 
-- [ ] create lib.rs
+- create lib.rs
+  - [ ] create Application implementation
 
 - tests/
   - [ ] helpers.rs
