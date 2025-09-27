@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use wiremock::MockServer;
 
+use load_balancer::domain::LoadBalancer;
 use load_balancer::{app_state::AppState, utils::constants::test, Application};
 
 pub struct TestApp {
@@ -16,9 +17,27 @@ impl TestApp {
     pub async fn new() -> Self {
         let app_state = AppState {};
 
-        let app = Application::build(app_state, test::LB_IP_ADDR, test::LB_PORT)
-            .await
-            .expect("Failed to build app");
+        let worker_hosts = vec![
+            "http://localhost:7701".to_string(),
+            "http://localhost:7702".to_string(),
+        ];
+
+        let load_balancer = Arc::new(RwLock::new(
+            LoadBalancer::new(worker_hosts).expect("failed to create load balancer"),
+        ));
+
+        let app_state = AppState::new();
+
+        let app = Application::build(
+            app_state,
+            load_balancer,
+            &format!("{}:{}", test::LB_IP_ADDR, test::LB_PORT),
+        )
+        .await
+        .expect("Failed to build app");
+        //        let app = Application::build(app_state, test::LB_IP_ADDR, test::LB_PORT)
+        //            .await
+        //            .expect("Failed to build app");
 
         let address = format!("http://{}", app.address.clone());
 

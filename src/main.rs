@@ -1,6 +1,6 @@
-use hyper::{service::service_fn, Request, Response};
-use std::{convert::Infallible, net::SocketAddr, str::FromStr, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::{error, info, trace, warn};
 
 use load_balancer::{
     app_state::AppState,
@@ -9,19 +9,11 @@ use load_balancer::{
     Application,
 };
 
-//mod app_state;
-
-async fn handle(
-    req: Request<hyper::body::Incoming>,
-    load_balancer: Arc<RwLock<LoadBalancer>>,
-    //) -> Result<Response<hyper::body::Incoming>, hyper::Error> {
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let _ = load_balancer.write().await;
-    LoadBalancer::forward_request(req).await
-}
-
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
+    tracing::info!("Starting app");
+
     let worker_hosts = vec![
         "http://localhost:7701".to_string(),
         "http://localhost:7702".to_string(),
