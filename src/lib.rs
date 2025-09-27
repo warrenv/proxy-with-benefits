@@ -84,7 +84,7 @@ impl Application {
                     //.serve_connection(io, service_fn(self.app_state.load_balancer.forward_request))
                     .await
                 {
-                    eprintln!("Error serving connection: {}", err);
+                    tracing::error!("Error serving connection: {}", err);
                 }
             });
         }

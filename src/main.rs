@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{error, info, trace, warn};
 
 use load_balancer::{
     app_state::AppState,
