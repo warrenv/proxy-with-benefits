@@ -1,6 +1,3 @@
-use std::sync::Arc;
-use tokio::sync::RwLock;
-
 use load_balancer::{
     app_state::AppState,
     domain::LoadBalancer,
@@ -19,17 +16,14 @@ async fn main() {
         "http://localhost:7702".to_string(),
     ];
 
-    let load_balancer = Arc::new(RwLock::new(
-        LoadBalancer::new(worker_hosts).expect("failed to create load balancer"),
-    ));
+    let load_balancer = LoadBalancer::new(worker_hosts).expect("failed to create load balancer");
 
-    let app_state = AppState::new();
+    let app_state = AppState::new(load_balancer);
 
     tracing::info!("Creating Application");
 
     let app = Application::build(
         app_state,
-        load_balancer,
         &format!("{}:{}", DEFAULT_LB_IP_ADDR, DEFAULT_LB_PORT),
     )
     .await

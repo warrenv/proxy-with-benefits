@@ -28,10 +28,11 @@ impl LoadBalancer {
     }
 
     pub async fn forward_request(
-        &self,
+        &mut self,
         req: Request<hyper::body::Incoming>,
-        //) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     ) -> Result<Response<Full<Bytes>>, Box<dyn std::error::Error + Send + Sync>> {
+        let _worker = self.get_worker();
+
         let (mut parts, body) = req.into_parts();
         tracing::info!("parts: {:?}", parts);
         tracing::info!("body: {:?}", body);
@@ -83,7 +84,6 @@ impl LoadBalancer {
 
         println!("\n\nDone!");
 
-        //    Ok(())
         Ok(Response::new(Full::new(Bytes::from(
             "Hello from deep in LB!",
         ))))

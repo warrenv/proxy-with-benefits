@@ -30,10 +30,10 @@ async fn handle(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     let lb = { load_balancer.read().await };
-    let x = lb.forward_request(req).await.unwrap();
+    let x = lb.clone().forward_request(req).await.unwrap();
     //Ok(Response::new(Full::new(Bytes::from("Hello, LB World!"))))
     //Ok(Response::new(Full::new(Bytes::from(x))))
-    Ok(x)
+    Ok(x.clone())
 }
 
 //async fn handle(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
@@ -43,14 +43,14 @@ async fn handle(
 // This struct encapsulates our application-related logic.
 pub struct Application {
     app_state: AppState,
-    load_balancer: Arc<RwLock<LoadBalancer>>,
+    //    load_balancer: Arc<RwLock<LoadBalancer>>,
     pub address: String,
 }
 
 impl Application {
     pub async fn build(
         app_state: AppState,
-        load_balancer: Arc<RwLock<LoadBalancer>>,
+        //        load_balancer: Arc<RwLock<LoadBalancer>>,
         _address: &str,
     ) -> Result<Self, Box<dyn Error>> {
         // TODO: get these from app_state.config
@@ -58,7 +58,7 @@ impl Application {
 
         Ok(Application {
             app_state,
-            load_balancer,
+            //           load_balancer,
             address: address.to_string(),
         })
     }
@@ -70,7 +70,7 @@ impl Application {
         let listener = TcpListener::bind(self.address).await?;
 
         loop {
-            let load_balancer = Arc::clone(&self.load_balancer);
+            let load_balancer = Arc::clone(&self.app_state.load_balancer);
 
             // When an incoming TCP connection is received grab a TCP stream for
             // client-server communication.
@@ -104,20 +104,9 @@ impl Application {
                 // HTTP requests received on that connection to the `hello` function
                 //if let Err(err) = http2::Builder::new(TokioExecutor)
 
-                let service = service_fn(|req| {
-                    //let foo = self.load_balancer.worker_hosts.clone(); //vec!["http://example.com".to_string()];
-                    //handle(&vec![], req)
-                    handle(load_balancer.clone(), req)
-                });
-                //let service = service_fn(move |req| handle(&self.load_balancer.worker_hosts, req));
-                //let fut = builder.serve_connection(io, svc);
+                let service = service_fn(|req| handle(load_balancer.clone(), req));
 
-                if let Err(err) = http1::Builder::new()
-                    .serve_connection(io, service)
-                    //.serve_connection(io, service_fn(handle))
-                    // .serve_connection(io, service_fn(self.load_balancer.forward_request))
-                    .await
-                {
+                if let Err(err) = http1::Builder::new().serve_connection(io, service).await {
                     tracing::error!("Error serving connection: {}", err);
                 }
             });
@@ -148,16 +137,16 @@ pub struct ErrorResponse {
 //    }
 //}
 
-fn log_error_chain(e: &(dyn Error + 'static)) {
-    let separator =
-        "\n-----------------------------------------------------------------------------------\n";
-    let mut report = format!("{}{:?}\n", separator, e);
-    let mut current = e.source();
-    while let Some(cause) = current {
-        let str = format!("Caused by:\n\n{:?}", cause);
-        report = format!("{}\n{}", report, str);
-        current = cause.source();
-    }
-    report = format!("{}\n{}", report, separator);
-    tracing::error!("{}", report);
-}
+//fn log_error_chain(e: &(dyn Error + 'static)) {
+//    let separator =
+//        "\n-----------------------------------------------------------------------------------\n";
+//    let mut report = format!("{}{:?}\n", separator, e);
+//    let mut current = e.source();
+//    while let Some(cause) = current {
+//        let str = format!("Caused by:\n\n{:?}", cause);
+//        report = format!("{}\n{}", report, str);
+//        current = cause.source();
+//    }
+//    report = format!("{}\n{}", report, separator);
+//    tracing::error!("{}", report);
+//}
