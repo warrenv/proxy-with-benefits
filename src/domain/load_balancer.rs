@@ -11,10 +11,7 @@ use tokio::net::TcpStream;
 
 #[derive(Clone)]
 pub struct LoadBalancer {
-    //client: Client<hyper::client::HttpConnector>,
-    //    client: http1,
-    //client: Client,
-    worker_hosts: Vec<String>,
+    pub worker_hosts: Vec<String>,
     current_worker: usize,
 }
 
@@ -24,16 +21,21 @@ impl LoadBalancer {
             return Err("No worker hosts provided".into());
         }
 
-        Ok(LoadBalancer {
-            //            client: Client::new(),
+        Ok(Self {
             worker_hosts,
             current_worker: 0,
         })
     }
 
     pub async fn forward_request(
-        _req: Request<hyper::body::Incoming>,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        &self,
+        req: Request<hyper::body::Incoming>,
+        //) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Response<Full<Bytes>>, Box<dyn std::error::Error + Send + Sync>> {
+        let (mut parts, body) = req.into_parts();
+        tracing::info!("parts: {:?}", parts);
+        tracing::info!("body: {:?}", body);
+
         let host = "example.com"; //req.host().expect("uri has no host");
         let port = 80; //req.port_u16().unwrap_or(80);
         let addr = format!("{}:{}", host, port);
@@ -47,18 +49,28 @@ impl LoadBalancer {
             }
         });
 
+        tracing::info!("connection to {} established", host);
+
         //let authority = url.authority().unwrap().clone();
 
-        let path = "/"; //url.path();
-        let req = Request::builder()
-            .uri(path)
-            //.header(hyper::header::HOST, authority.as_str())
-            .body(Empty::<Bytes>::new())?;
+        // 2025-09-27T21:00:12.928202Z  INFO load_balancer::domain::load_balancer: parts: Parts { method: GET, uri: /, version: HTTP/1.1, headers: {"host": "127.0.0.1:1337", "user-agent": "curl/8.14.1", "accept": "*/*"} }
 
-        let mut res = sender.send_request(req).await?;
+        let path = parts.uri; //"/"; //url.path();
+                              //        let req = Request::builder()
+                              //            .uri(path)
+                              //            //.header(hyper::header::HOST, authority.as_str())
+                              //            .body(Empty::<Bytes>::new())?;
 
-        println!("Response: {}", res.status());
+        let request = Request::builder()
+            .method(parts.method)
+            .uri("https://example.com/")
+            .body(Empty::<Bytes>::new())
+            .unwrap();
+
+        let mut res = sender.send_request(request).await?;
+
         println!("Headers: {:#?}\n", res.headers());
+        println!("Response: {}", res.status());
 
         // Stream the body, writing each chunk to stdout as we get it
         // (instead of buffering and printing at the end).
@@ -71,7 +83,10 @@ impl LoadBalancer {
 
         println!("\n\nDone!");
 
-        Ok(())
+        //    Ok(())
+        Ok(Response::new(Full::new(Bytes::from(
+            "Hello from deep in LB!",
+        ))))
     }
 
     fn get_worker(&mut self) -> &str {

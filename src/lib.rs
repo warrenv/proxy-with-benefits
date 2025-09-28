@@ -17,16 +17,28 @@ pub mod app_state;
 pub mod domain;
 pub mod utils;
 
+//async fn handle(req: Request<hyper::body::Incoming>) -> Result<Response<Body>, hyper::Error> {
 //async fn handle(
-//    req: Request<Body>,
-//    load_balancer: Arc<RwLock<LoadBalancer>>,
-//) -> Result<Response<Body>, hyper::Error> {
-//    load_balancer.write().await.forward_request(req).await
+//    context: AppContext,
+//    addr: SocketAddr,
+//    req: Request<Body>
+//) -> Result<Response<Body>, Infallible> {
+//    Ok(Response::new(Body::from("Hello World")))
 //}
-
-async fn handle(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
-    Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
+async fn handle(
+    load_balancer: Arc<RwLock<LoadBalancer>>,
+    req: Request<hyper::body::Incoming>,
+) -> Result<Response<Full<Bytes>>, Infallible> {
+    let lb = { load_balancer.read().await };
+    let x = lb.forward_request(req).await.unwrap();
+    //Ok(Response::new(Full::new(Bytes::from("Hello, LB World!"))))
+    //Ok(Response::new(Full::new(Bytes::from(x))))
+    Ok(x)
 }
+
+//async fn handle(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
+//    Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
+//}
 
 // This struct encapsulates our application-related logic.
 pub struct Application {
@@ -58,6 +70,8 @@ impl Application {
         let listener = TcpListener::bind(self.address).await?;
 
         loop {
+            let load_balancer = Arc::clone(&self.load_balancer);
+
             // When an incoming TCP connection is received grab a TCP stream for
             // client-server communication.
             //
@@ -75,13 +89,33 @@ impl Application {
             // Spin up a new task in Tokio so we can continue to listen for new TCP connection on the
             // current task without waiting for the processing of the HTTP/2 connection we just received
             // to finish
+
+            //let foo = &self.load_balancer.worker_hosts; //vec!["http://example.com".to_string()];
+
+            //let foo: Vec<String> = self.load_balancer.worker_hosts.into(); //vec!["http://example.com".to_string()];
+
+            //let foo: Vec<String> = vec!["a".into(), "bc".into(), "de".into()];
+
+            //let foo = &self.load_balancer.worker_hosts;
+            //let foo = &self.load_balancer;
+
             tokio::task::spawn(async move {
                 // Handle the connection from the client using HTTP/2 with an executor and pass any
                 // HTTP requests received on that connection to the `hello` function
                 //if let Err(err) = http2::Builder::new(TokioExecutor)
+
+                let service = service_fn(|req| {
+                    //let foo = self.load_balancer.worker_hosts.clone(); //vec!["http://example.com".to_string()];
+                    //handle(&vec![], req)
+                    handle(load_balancer.clone(), req)
+                });
+                //let service = service_fn(move |req| handle(&self.load_balancer.worker_hosts, req));
+                //let fut = builder.serve_connection(io, svc);
+
                 if let Err(err) = http1::Builder::new()
-                    .serve_connection(io, service_fn(handle))
-                    //.serve_connection(io, service_fn(self.app_state.load_balancer.forward_request))
+                    .serve_connection(io, service)
+                    //.serve_connection(io, service_fn(handle))
+                    // .serve_connection(io, service_fn(self.load_balancer.forward_request))
                     .await
                 {
                     tracing::error!("Error serving connection: {}", err);
