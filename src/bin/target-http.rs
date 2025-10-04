@@ -16,7 +16,8 @@ use tokio::time::{sleep, Duration};
 // An async function that consumes a request, does nothing with it and returns a
 // response.
 async fn hello(_: Request<impl hyper::body::Body>) -> Result<Response<Full<Bytes>>, Infallible> {
-    sleep(Duration::from_millis(200)).await;
+    let delay: u64 = env::var("DELAY").unwrap().parse().unwrap();
+    sleep(Duration::from_millis(delay)).await;
     Ok(Response::new(Full::new(Bytes::from(
         "Hello from http delay!\n",
     ))))
