@@ -29,11 +29,11 @@ impl LoadBalancer {
 
     pub async fn forward_request(
         &mut self,
-        req: Request<hyper::body::Incoming>,
+        mut req: Request<hyper::body::Incoming>,
     ) -> Result<Response<Full<Bytes>>, Box<dyn std::error::Error + Send + Sync>> {
         let worker = self.get_worker();
 
-        let (parts, _) = req.into_parts();
+        //let (parts, _) = req.into_parts();
         //let (mut parts, body) = req.into_parts();
         //tracing::info!("parts: {:?}", parts);
         //tracing::info!("body: {:?}", body);
@@ -56,21 +56,39 @@ impl LoadBalancer {
 
         //let authority = url.authority().unwrap().clone();
 
-        // 2025-09-27T21:00:12.928202Z  INFO load_balancer::domain::load_balancer: parts: Parts { method: GET, uri: /, version: HTTP/1.1, headers: {"host": "127.0.0.1:1337", "user-agent": "curl/8.14.1", "accept": "*/*"} }
+        let uri_string = format!(
+            "http://{}{}",
+            worker,
+            req.uri()
+                .path_and_query()
+                .map(|x| x.as_str())
+                .unwrap_or("/")
+        );
+        let uri = uri_string.parse().unwrap();
+        *req.uri_mut() = uri;
 
-        //let path = parts.uri; //"/"; //url.path();
+        //        let path = parts.uri;
+        tracing::info!("altered req: {:?}", req);
+        //"/"; //url.path();
         //        let req = Request::builder()
         //            .uri(path)
         //            //.header(hyper::header::HOST, authority.as_str())
         //            .body(Empty::<Bytes>::new())?;
 
-        let request = Request::builder()
-            .method(parts.method)
-            .uri("https://example.com/")
-            .body(Empty::<Bytes>::new())
-            .unwrap();
+        //let body_req = req.collect().await?.to_bytes();
+        //        let body_req = Empty::<Bytes>::new();
+        //        let request = Request::builder()
+        //            //.method(parts.method)
+        //            //.method(parts.method)
+        //            //.uri(path)
+        //            //            .uri("https://example.com/")
+        //            //.body(Empty::<Bytes>::new())
+        //            .body(body_req)
+        //            .unwrap();
+        //tracing::info!("new request: {:?}", request);
 
-        let res = sender.send_request(request).await?;
+        //let res = sender.send_request(request).await?;
+        let res = sender.send_request(req).await?;
         tracing::info!("Response: {}", res.status());
         let body = res.collect().await?.to_bytes();
 

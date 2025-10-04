@@ -25,9 +25,27 @@ pub mod utils;
 //) -> Result<Response<Body>, Infallible> {
 //    Ok(Response::new(Body::from("Hello World")))
 //}
+
+// use this when we add more routes to the proxy.
+//async fn response_examples(req: Request<IncomingBody>) -> Result<Response<BoxBody>> {
+//    match (req.method(), req.uri().path()) {
+//        (&Method::GET, "/") | (&Method::GET, "/index.html") => Ok(Response::new(full(INDEX))),
+//        (&Method::GET, "/test.html") => client_request_response().await,
+//        (&Method::POST, "/json_api") => api_post_response(req).await,
+//        (&Method::GET, "/json_api") => api_get_response().await,
+//        _ => {
+//            // Return 404 not found response.
+//            Ok(Response::builder()
+//                .status(StatusCode::NOT_FOUND)
+//                .body(full(NOTFOUND))
+//                .unwrap())
+//        }
+//    }
+//}
+
 async fn handle(
     load_balancer: Arc<RwLock<LoadBalancer>>,
-    req: Request<hyper::body::Incoming>,
+    mut req: Request<hyper::body::Incoming>,
 ) -> Result<Response<Full<Bytes>>, Infallible> {
     Ok(load_balancer
         .write()
@@ -106,7 +124,7 @@ impl Application {
                 // HTTP requests received on that connection to the `hello` function
                 //if let Err(err) = http2::Builder::new(TokioExecutor)
 
-                let service = service_fn(|req| handle(load_balancer.clone(), req));
+                let service = service_fn(|mut req| handle(load_balancer.clone(), req));
 
                 if let Err(err) = http1::Builder::new().serve_connection(io, service).await {
                     tracing::error!("Error serving connection: {}", err);

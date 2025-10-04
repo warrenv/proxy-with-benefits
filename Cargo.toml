@@ -10,7 +10,7 @@ path = "src/bin/target-http.rs"
 [dependencies]
 # support
 async-trait = "0.1.78"
-bytes = "1.10.1"
+#bytes = "1.10.1"
 color-eyre = "0.6.3"
 dotenvy = "0.15.7"
 http-body-util = "0.1"
