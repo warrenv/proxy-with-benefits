@@ -4,13 +4,13 @@ use hyper::{server::conn::http1, service::service_fn};
 use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::error::Error;
 use std::{convert::Infallible, net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock; //, TcpStream};
 
 use crate::app_state::AppState;
-
 use crate::domain::LoadBalancer;
 
 pub mod app_state;
@@ -54,7 +54,8 @@ impl Application {
         _address: &str,
     ) -> Result<Self, Box<dyn Error>> {
         // TODO: get these from app_state.config
-        let address: SocketAddr = SocketAddr::from(([127, 0, 0, 1], 1337));
+        let port: u16 = env::var("PORT").unwrap().parse().unwrap();
+        let address: SocketAddr = SocketAddr::from(([127, 0, 0, 1], port));
 
         Ok(Application {
             app_state,
