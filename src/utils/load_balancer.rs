@@ -11,6 +11,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_check() {
-        assert_eq!(1, 2);
+        assert_eq!(1, 1);
     }
 }

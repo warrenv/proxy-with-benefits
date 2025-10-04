@@ -15,22 +15,19 @@ pub struct TestApp {
 
 impl TestApp {
     pub async fn new() -> Self {
-        let app_state = AppState {};
-
         let worker_hosts = vec![
             "http://localhost:7701".to_string(),
             "http://localhost:7702".to_string(),
         ];
 
-        let load_balancer = Arc::new(RwLock::new(
-            LoadBalancer::new(worker_hosts).expect("failed to create load balancer"),
-        ));
+        let load_balancer =
+            LoadBalancer::new(worker_hosts).expect("failed to create load balancer");
 
-        let app_state = AppState::new();
+        let app_state = AppState::new(load_balancer);
 
         let app = Application::build(
             app_state,
-            load_balancer,
+            //            load_balancer,
             &format!("{}:{}", test::LB_IP_ADDR, test::LB_PORT),
         )
         .await
