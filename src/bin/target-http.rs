@@ -3,16 +3,13 @@
 //use bytes::Bytes;
 use http_body_util::Empty;
 use http_body_util::Full;
+use http_body_util::{combinators::BoxBody, BodyExt};
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-//use hyper::{body::Incoming as IncomingBody, header, Method, Request, Response, StatusCode};
 use hyper::{Method, Request, Response, StatusCode};
-//use hyper::{Request, Response};
-use http_body_util::{combinators::BoxBody, BodyExt};
 use hyper_util::rt::TokioIo;
 use hyper_util::rt::TokioTimer;
-//use std::convert::Infallible;
 use std::env;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
@@ -24,20 +21,8 @@ async fn response_examples(
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         //        (&Method::GET, "/") => Ok(Response::new(full("Try POSTing data to /echo"))),
-        (&Method::GET, "/health") => {
-            println!("got a health check request");
-            let mut found = Response::new(empty());
-            *found.status_mut() = StatusCode::OK;
-            Ok(found)
-        }
-
+        (&Method::GET, "/health") => health(req).await,
         (&Method::GET, "/") => hello(req).await,
-        //        (&Method::POST, "/") => {
-        //            // we'll be back
-        //            let mut found = Response::new(empty());
-        //            *found.status_mut() = StatusCode::OK;
-        //            Ok(found)
-        //        }
 
         // Return 404 Not Found for other routes.
         _ => {
@@ -48,65 +33,22 @@ async fn response_examples(
     }
 }
 
-//async fn response_examples(req: Request<IncomingBody>) -> Result<Response<BoxBody>> {
-//async fn response_examples2(
-//    req: Request<hyper::body::Incoming>,
-//    //) -> Result<Response<Full<Bytes>>, Infallible> {
-//) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
-//    println!("req: {:?}", req);
-//
-//    match (req.method(), req.uri().path()) {
-//        (&Method::GET, "/") => hello(req).await,
-//        (&Method::GET, "/health") => health(req).await,
-//        _ => {
-//            // Return 404 not found response.
-//            Ok(Response::builder()
-//                .status(StatusCode::NOT_FOUND)
-//                .body(Full::new(Bytes::from("Not found")))
-//                .boxed())
-//        }
-//    }
-//}
-
-// An async function that consumes a request, does nothing with it and returns a
-// response.
-//async fn hello(req: Request<impl hyper::body::Body>) -> Result<Response<Full<Bytes>>, Infallible> {
-//async fn hello(req: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
 async fn hello(
     req: Request<hyper::body::Incoming>,
-    //) -> Result<BoxBody<Bytes, hyper::Error>, Infallible> {
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    println!("hello REQ: {:?}", req);
     let delay: u64 = env::var("DELAY").unwrap().parse().unwrap();
     sleep(Duration::from_millis(delay)).await;
-    //Ok(Response::new(Full::new(Bytes::from(
-    //    "Hello from http delay!\n",
-    //))))
-
-    println!("REQ REQ: {:?}", req);
-    //let (parts, body) = req.into_parts();
-    //let body_bytes = hyper::body::to_bytes(body).await.unwrap();
-    //let body_bytes = req.into_body();
-    //    println!("REQ BODY: {:?}", body_bytes);
-    //println!("REQ BODY: {:?}", req.body().collect().await?.to_bytes(););
-    //println!("REQ BODY: {:?}", Bytes::from(req.body()));
-    //    let whole_body = req.collect().await?.to_bytes();
-    //    println!("BODY: {}", whole_body);
 
     Ok(Response::new(req.into_body().boxed()))
-
-    //    Ok(Response::new(Full::new(Bytes::from(format!(
-    //        "Hello from http delay!\n",
-    //    )))))
 }
 
-//async fn health(_: Request<impl hyper::body::Body>) -> Result<Response<Full<Bytes>>, Infallible> {
-//async fn health(
-//    _: Request<impl hyper::body::Body>,
-//) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
-//    Ok(Response::builder()
-//        .status(StatusCode::OK)
-//        .body(Full::new(Bytes::from(""))))
-//}
+async fn health(
+    req: Request<hyper::body::Incoming>,
+) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    println!("health REQ: {:?}", req);
+    Ok(Response::new(empty().boxed()))
+}
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {

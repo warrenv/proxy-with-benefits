@@ -1,12 +1,8 @@
 //use hyper::{client::ResponseFuture, Body, Client, Request, Uri};
+use http_body_util::BodyExt;
 use http_body_util::Full;
-use hyper::{body::Bytes, Request, Response, Uri};
-use tokio::io::{self, AsyncWriteExt as _};
-//use reqwest::Client;
-use http_body_util::{BodyExt, Empty};
+use hyper::{body::Bytes, Request, Response};
 use hyper_util::rt::TokioIo;
-use std::convert::Infallible;
-use std::str::FromStr;
 use tokio::net::TcpStream;
 
 #[derive(Clone, Debug)]
@@ -33,7 +29,6 @@ impl LoadBalancer {
     ) -> Result<Response<Full<Bytes>>, Box<dyn std::error::Error + Send + Sync>> {
         let worker = self.get_worker();
 
-        //let (parts, _) = req.into_parts();
         //let (mut parts, body) = req.into_parts();
         //tracing::info!("parts: {:?}", parts);
         //tracing::info!("body: {:?}", body);
@@ -54,6 +49,7 @@ impl LoadBalancer {
 
         tracing::info!("connection to {} established", worker);
 
+        // TODO: use this to set host header.
         //let authority = url.authority().unwrap().clone();
 
         let uri_string = format!(
@@ -67,27 +63,8 @@ impl LoadBalancer {
         let uri = uri_string.parse().unwrap();
         *req.uri_mut() = uri;
 
-        //        let path = parts.uri;
         tracing::info!("altered req: {:?}", req);
-        //"/"; //url.path();
-        //        let req = Request::builder()
-        //            .uri(path)
-        //            //.header(hyper::header::HOST, authority.as_str())
-        //            .body(Empty::<Bytes>::new())?;
 
-        //let body_req = req.collect().await?.to_bytes();
-        //        let body_req = Empty::<Bytes>::new();
-        //        let request = Request::builder()
-        //            //.method(parts.method)
-        //            //.method(parts.method)
-        //            //.uri(path)
-        //            //            .uri("https://example.com/")
-        //            //.body(Empty::<Bytes>::new())
-        //            .body(body_req)
-        //            .unwrap();
-        //tracing::info!("new request: {:?}", request);
-
-        //let res = sender.send_request(request).await?;
         let res = sender.send_request(req).await?;
         tracing::info!("Response: {}", res.status());
         let body = res.collect().await?.to_bytes();
