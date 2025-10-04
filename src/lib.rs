@@ -29,11 +29,12 @@ async fn handle(
     load_balancer: Arc<RwLock<LoadBalancer>>,
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<Full<Bytes>>, Infallible> {
-    let lb = { load_balancer.read().await };
-    let x = lb.clone().forward_request(req).await.unwrap();
-    //Ok(Response::new(Full::new(Bytes::from("Hello, LB World!"))))
-    //Ok(Response::new(Full::new(Bytes::from(x))))
-    Ok(x.clone())
+    Ok(load_balancer
+        .write()
+        .await
+        .forward_request(req)
+        .await
+        .unwrap())
 }
 
 //async fn handle(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {

@@ -9,7 +9,7 @@ use std::convert::Infallible;
 use std::str::FromStr;
 use tokio::net::TcpStream;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LoadBalancer {
     pub worker_hosts: Vec<String>,
     current_worker: usize,
@@ -31,16 +31,18 @@ impl LoadBalancer {
         &mut self,
         req: Request<hyper::body::Incoming>,
     ) -> Result<Response<Full<Bytes>>, Box<dyn std::error::Error + Send + Sync>> {
-        let _worker = self.get_worker();
+        let worker = self.get_worker();
 
-        let (mut parts, body) = req.into_parts();
-        tracing::info!("parts: {:?}", parts);
-        tracing::info!("body: {:?}", body);
+        let (parts, _) = req.into_parts();
+        //let (mut parts, body) = req.into_parts();
+        //tracing::info!("parts: {:?}", parts);
+        //tracing::info!("body: {:?}", body);
 
-        let host = "example.com"; //req.host().expect("uri has no host");
-        let port = 80; //req.port_u16().unwrap_or(80);
-        let addr = format!("{}:{}", host, port);
-        let stream = TcpStream::connect(addr).await?;
+        //let host = "example.com"; //req.host().expect("uri has no host");
+        //let port = 80; //req.port_u16().unwrap_or(80);
+        //let addr = format!("{}:{}", host, port);
+        //let stream = TcpStream::connect(addr).await?;
+        let stream = TcpStream::connect(worker).await?;
         let io = TokioIo::new(stream);
 
         let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
@@ -50,17 +52,17 @@ impl LoadBalancer {
             }
         });
 
-        tracing::info!("connection to {} established", host);
+        tracing::info!("connection to {} established", worker);
 
         //let authority = url.authority().unwrap().clone();
 
         // 2025-09-27T21:00:12.928202Z  INFO load_balancer::domain::load_balancer: parts: Parts { method: GET, uri: /, version: HTTP/1.1, headers: {"host": "127.0.0.1:1337", "user-agent": "curl/8.14.1", "accept": "*/*"} }
 
-        let path = parts.uri; //"/"; //url.path();
-                              //        let req = Request::builder()
-                              //            .uri(path)
-                              //            //.header(hyper::header::HOST, authority.as_str())
-                              //            .body(Empty::<Bytes>::new())?;
+        //let path = parts.uri; //"/"; //url.path();
+        //        let req = Request::builder()
+        //            .uri(path)
+        //            //.header(hyper::header::HOST, authority.as_str())
+        //            .body(Empty::<Bytes>::new())?;
 
         let request = Request::builder()
             .method(parts.method)
@@ -68,31 +70,19 @@ impl LoadBalancer {
             .body(Empty::<Bytes>::new())
             .unwrap();
 
-        let mut res = sender.send_request(request).await?;
+        let res = sender.send_request(request).await?;
+        tracing::info!("Response: {}", res.status());
+        let body = res.collect().await?.to_bytes();
 
-        println!("Headers: {:#?}\n", res.headers());
-        println!("Response: {}", res.status());
-
-        // Stream the body, writing each chunk to stdout as we get it
-        // (instead of buffering and printing at the end).
-        while let Some(next) = res.frame().await {
-            let frame = next?;
-            if let Some(chunk) = frame.data_ref() {
-                io::stdout().write_all(chunk).await?;
-            }
-        }
-
-        println!("\n\nDone!");
-
-        Ok(Response::new(Full::new(Bytes::from(
-            "Hello from deep in LB!",
-        ))))
+        Ok(Response::new(Full::new(Bytes::from(body))))
     }
 
     fn get_worker(&mut self) -> &str {
         // Use a round-robin strategy to select a worker
         let worker = self.worker_hosts.get(self.current_worker).unwrap();
         self.current_worker = (self.current_worker + 1) % self.worker_hosts.len();
+
+        tracing::info!("{:?}", self);
         worker
     }
 }

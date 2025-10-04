@@ -12,8 +12,10 @@ async fn main() {
     tracing::info!("Creating LoadBalancer");
 
     let worker_hosts = vec![
-        "http://localhost:7701".to_string(),
-        "http://localhost:7702".to_string(),
+        //"http://localhost:7701".to_string(),
+        //"http://localhost:7702".to_string(),
+        "localhost:7701".to_string(),
+        "localhost:7702".to_string(),
     ];
 
     let load_balancer = LoadBalancer::new(worker_hosts).expect("failed to create load balancer");
