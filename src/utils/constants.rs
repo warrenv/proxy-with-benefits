@@ -33,9 +33,7 @@ fn set_bind_port() -> String {
 fn set_secret_some() -> Secret<String> {
     dotenv().ok();
 
-    Secret::new(
-        std_env::var(env::LB_SECRET_SOME_ENV_VAR).expect("PROXBEN_SECRET_SOME must be set."),
-    )
+    Secret::new(std_env::var(env::LB_SECRET_SOME_ENV_VAR).expect("LB_SECRET_SOME must be set."))
 }
 
 // Hard coded values per environment.

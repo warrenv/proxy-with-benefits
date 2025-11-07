@@ -1,6 +1,4 @@
-//use hyper::{client::ResponseFuture, Body, Client, Request, Uri};
-use http_body_util::BodyExt;
-use http_body_util::Full;
+use http_body_util::{BodyExt, Full};
 use hyper::{body::Bytes, Request, Response};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpStream;
@@ -29,6 +27,7 @@ impl LoadBalancer {
     ) -> Result<Response<Full<Bytes>>, Box<dyn std::error::Error + Send + Sync>> {
         let worker = self.get_worker();
 
+        // TODO: extract header, parts from original request.
         //let (mut parts, body) = req.into_parts();
         //tracing::info!("parts: {:?}", parts);
         //tracing::info!("body: {:?}", body);

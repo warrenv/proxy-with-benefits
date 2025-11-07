@@ -27,14 +27,10 @@ impl TestApp {
 
         let app = Application::build(
             app_state,
-            //            load_balancer,
             &format!("{}:{}", test::LB_IP_ADDR, test::LB_PORT),
         )
         .await
         .expect("Failed to build app");
-        //        let app = Application::build(app_state, test::LB_IP_ADDR, test::LB_PORT)
-        //            .await
-        //            .expect("Failed to build app");
 
         let address = format!("http://{}", app.address.clone());
 
@@ -43,6 +39,7 @@ impl TestApp {
         #[allow(clippy::let_underscore_future)]
         let _ = tokio::spawn(app.run());
 
+        // TODO: switch this to use hyper client and remove a dependency.
         let http_client = reqwest::Client::builder().build().unwrap();
 
         Self {
